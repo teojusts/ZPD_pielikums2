@@ -1,0 +1,11 @@
+{
+    "one_time_purchase": [
+        {
+            "Price_per_m²": 1333.33,
+            "Price": 32000.0,
+            "m²": 24.0
+        }
+    ],
+    "monthly": [],
+    "daily": []
+}
