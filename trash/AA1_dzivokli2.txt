@@ -1,0 +1,133 @@
+import requests
+from lxml import html
+import json
+import re
+import os
+
+# Directory where the data will be saved
+output_dir = 'dzivoklu_data'
+os.makedirs(output_dir, exist_ok=True)
+
+# Define the function to scrape prices
+def scrape_prices(base_url, total_pages, output_filename):
+    # Initialize lists to store prices based on their type
+    one_time_purchase = []
+    monthly = []
+    daily = []
+
+    # Loop through the pages
+    for page_number in range(1, total_pages + 1):
+        # Construct the full URL for the current page
+        url = base_url.format(page_number)
+
+        # Send a GET request to the webpage
+        response = requests.get(url)
+
+        # Check if the request was successful
+        if response.status_code == 200:
+            # Parse the HTML content
+            tree = html.fromstring(response.content)
+
+            # XPath to extract all rows from the listings
+            listings_xpath = '//tr'
+
+            # Extract listings using XPath
+            listings_elements = tree.xpath(listings_xpath)
+
+            # Iterate over each listing
+            for listing in listings_elements:
+                # Extract the actual price text
+                actual_price_element = listing.xpath('./td[9]/text()')
+                actual_price_text = actual_price_element[0].strip() if actual_price_element else ""
+
+                # Extract the type of pricing text
+                pricing_type_element = listing.xpath('./td[10]/text()')
+                pricing_type_text = pricing_type_element[0].strip() if pricing_type_element else ""
+
+                # Check if the listing contains "pērku" and skip it if it does
+                if "pērku" in listing.text_content():
+                    continue
+
+                # Clean the actual price string
+                cleaned_price = actual_price_text.strip()
+
+                # Check if the cleaned price is not empty and contains digits
+                if cleaned_price and re.search(r'\d', cleaned_price):
+                    try:
+                        # Convert the cleaned price to a float, removing commas as thousands separators
+                        price_value = float(re.sub(r'[^\d.]', '', cleaned_price))
+
+                        # Categorize the price based on the pricing type
+                        if "/mēn." in pricing_type_text:
+                            # Add to monthly prices list
+                            monthly.append(price_value)
+                        elif "dienā" in pricing_type_text:
+                            # Add to daily prices list
+                            daily.append(price_value)
+                        else:
+                            # Add to one-time purchase prices list
+                            one_time_purchase.append(price_value)
+                    except ValueError as e:
+                        print(f"Skipping invalid price: '{cleaned_price}'. Error: {e}")
+
+        else:
+            print(f"Failed to retrieve the webpage for page {page_number}. Status code: {response.status_code}")
+
+    # Create a dictionary with lists
+    sorted_prices = {
+        "one_time_purchase": one_time_purchase,
+        "monthly": monthly,
+        "daily": daily
+    }
+
+    # Save the dictionary to a JSON file in the specified folder
+    with open(os.path.join(output_dir, output_filename), 'w', encoding='utf-8') as json_file:
+        json.dump(sorted_prices, json_file, ensure_ascii=False, indent=4, separators=(',', ': '))
+
+    # Print the overall sorted lists of prices
+    print(f"Data saved to {output_filename}:")
+    print(json.dumps(sorted_prices, ensure_ascii=False, indent=4, separators=(',', ': ')))
+
+
+# Define the URLs and corresponding total pages in a list of dictionaries
+locations = [
+    {"name": "Purvciems", "url": "https://www.ss.lv/lv/real-estate/flats/riga/purvciems/page{}.html", "pages": 14},
+    {"name": "Plyavnieki", "url": "https://www.ss.lv/lv/real-estate/flats/riga/plyavnieki/page{}.html", "pages": 11},
+    {"name": "Centre", "url": "https://www.ss.lv/lv/real-estate/flats/riga/centre/page{}.html", "pages": 58},
+    {"name": "Agenskalns", "url": "https://www.ss.lv/lv/real-estate/flats/riga/agenskalns/page{}.html", "pages": 11},
+    {"name": "Bolderaya", "url": "https://www.ss.lv/lv/real-estate/flats/riga/bolderaya/page{}.html", "pages": 4},
+    {"name": "Chiekurkalns", "url": "https://www.ss.lv/lv/real-estate/flats/riga/chiekurkalns/page{}.html", "pages": 4},
+    {"name": "Darzciems", "url": "https://www.ss.lv/lv/real-estate/flats/riga/darzciems/page{}.html", "pages": 4},
+    {"name": "Daugavgriva", "url": "https://www.ss.lv/lv/real-estate/flats/riga/daugavgriva/page{}.html", "pages": 2},
+    {"name": "Dreilini", "url": "https://www.ss.lv/lv/real-estate/flats/riga/dreilini/page{}.html", "pages": 2},
+    {"name": "Dzeguzhkalns", "url": "https://www.ss.lv/lv/real-estate/flats/riga/dzeguzhkalns/page{}.html", "pages": 4},
+    {"name": "Grizinkalns", "url": "https://www.ss.lv/lv/real-estate/flats/riga/grizinkalns/page{}.html", "pages": 2},
+    {"name": "Ilguciems", "url": "https://www.ss.lv/lv/real-estate/flats/riga/ilguciems/page{}.html", "pages": 7},
+    {"name": "Imanta", "url": "https://www.ss.lv/lv/real-estate/flats/riga/imanta/page{}.html", "pages": 10},
+    {"name": "Yugla", "url": "https://www.ss.lv/lv/real-estate/flats/riga/yugla/page{}.html", "pages": 7},
+    {"name": "Kengarags", "url": "https://www.ss.lv/lv/real-estate/flats/riga/kengarags/page{}.html", "pages": 13},
+    {"name": "Kipsala", "url": "https://www.ss.lv/lv/real-estate/flats/riga/kipsala/page{}.html", "pages": 2},
+    {"name": "Kliversala", "url": "https://www.ss.lv/lv/real-estate/flats/riga/kliversala/page{}.html", "pages": 2},
+    {"name": "Krasta Street Area", "url": "https://www.ss.lv/lv/real-estate/flats/riga/krasta-st-area/page{}.html", "pages": 4},
+    {"name": "Maskavas Priekshpilseta", "url": "https://www.ss.lv/lv/real-estate/flats/riga/maskavas-priekshpilseta/page{}.html", "pages": 6},
+    {"name": "Mangali", "url": "https://www.ss.lv/lv/real-estate/flats/riga/mangali/page{}.html", "pages": 2},
+    {"name": "Mezhapark", "url": "https://www.ss.lv/lv/real-estate/flats/riga/mezhapark/page{}.html", "pages": 5},
+    {"name": "Mezhciems", "url": "https://www.ss.lv/lv/real-estate/flats/riga/mezhciems/page{}.html", "pages": 6},
+    {"name": "Shampeteris-Pleskodale", "url": "https://www.ss.lv/lv/real-estate/flats/riga/shampeteris-pleskodale/page{}.html", "pages": 4},
+    {"name": "Sarkandaugava", "url": "https://www.ss.lv/lv/real-estate/flats/riga/sarkandaugava/page{}.html", "pages": 6},
+    {"name": "Shkirotava", "url": "https://www.ss.lv/lv/real-estate/flats/riga/shkirotava/page{}.html", "pages": 2},
+    {"name": "Teika", "url": "https://www.ss.lv/lv/real-estate/flats/riga/teika/page{}.html", "pages": 10},
+    {"name": "Tornjakalns", "url": "https://www.ss.lv/lv/real-estate/flats/riga/tornjakalns/page{}.html", "pages": 3},
+    {"name": "Vecmilgravis", "url": "https://www.ss.lv/lv/real-estate/flats/riga/vecmilgravis/page{}.html", "pages": 6},
+    {"name": "Vecriga", "url": "https://www.ss.lv/lv/real-estate/flats/riga/vecriga/page{}.html", "pages": 4},
+    {"name": "Ziepniekkalns", "url": "https://www.ss.lv/lv/real-estate/flats/riga/ziepniekkalns/page{}.html", "pages": 9},
+    {"name": "Zolitude", "url": "https://www.ss.lv/lv/real-estate/flats/riga/zolitude/page{}.html", "pages": 7}
+]
+
+# Loop through each location and scrape the data
+for location in locations:
+    # Generate the filename by using the name of the location and save it to the specified folder
+    output_filename = f"{location['name'].replace(' ', '_')}.json"
+    
+    # Call the scrape_prices function with the corresponding URL, page count, and filename
+    scrape_prices(location["url"], location["pages"], output_filename)

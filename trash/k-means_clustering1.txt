@@ -1,0 +1,72 @@
+import json
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+
+# Load data from JSON files
+with open('Centre.json') as f:
+    centre_data = json.load(f)
+
+with open('Bolderaya.json') as f:
+    bolderaya_data = json.load(f)
+
+# Combine one-time purchase and monthly data from both files
+one_time_purchases = centre_data['one_time_purchase'] + bolderaya_data['one_time_purchase']
+monthly_prices = centre_data['monthly'] + bolderaya_data['monthly']
+
+# Create labels for the data points
+labels_one_time = ['Centre' if i < len(centre_data['one_time_purchase']) else 'Bolderaya' 
+                   for i in range(len(one_time_purchases))]
+
+labels_monthly = ['Centre' if i < len(centre_data['monthly']) else 'Bolderaya' 
+                  for i in range(len(monthly_prices))]
+
+# Convert to numpy arrays for clustering
+one_time_purchases = np.array(one_time_purchases).reshape(-1, 1)
+monthly_prices = np.array(monthly_prices).reshape(-1, 1)
+
+# K-means clustering for one-time purchases
+kmeans_one_time = KMeans(n_clusters=3)  # Choose an appropriate number of clusters
+kmeans_one_time.fit(one_time_purchases)
+one_time_clusters = kmeans_one_time.predict(one_time_purchases)
+
+# K-means clustering for monthly prices
+kmeans_monthly = KMeans(n_clusters=3)  # Choose an appropriate number of clusters
+kmeans_monthly.fit(monthly_prices)
+monthly_clusters = kmeans_monthly.predict(monthly_prices)
+
+# Define colors for Centre and Bolderaya
+colors_one_time = ['blue' if label == 'Centre' else 'orange' for label in labels_one_time]
+colors_monthly = ['blue' if label == 'Centre' else 'orange' for label in labels_monthly]
+
+# Plotting the clusters for one-time purchases
+plt.figure(figsize=(12, 6))
+
+plt.subplot(1, 2, 1)
+plt.scatter(one_time_purchases, np.zeros_like(one_time_purchases), 
+            c=colors_one_time, marker='o')
+plt.title('K-Means Clustering of One-Time Purchases')
+plt.xlabel('One-Time Purchase Price')
+plt.yticks([])  # Hide y-axis ticks
+
+# Adding labels to the one-time purchase plot
+for i in range(len(one_time_purchases)):
+    plt.annotate(labels_one_time[i], (one_time_purchases[i], 0), textcoords="offset points", 
+                 xytext=(0,10), ha='center', fontsize=8)
+
+# Plotting the clusters for monthly prices
+plt.subplot(1, 2, 2)
+plt.scatter(monthly_prices, np.zeros_like(monthly_prices), 
+            c=colors_monthly, marker='o')
+plt.title('K-Means Clustering of Monthly Prices')
+plt.xlabel('Monthly Price')
+plt.yticks([])  # Hide y-axis ticks
+
+# Adding labels to the monthly price plot
+for i in range(len(monthly_prices)):
+    plt.annotate(labels_monthly[i], (monthly_prices[i], 0), textcoords="offset points", 
+                 xytext=(0,10), ha='center', fontsize=8)
+
+# Show the plots
+plt.tight_layout()
+plt.show()

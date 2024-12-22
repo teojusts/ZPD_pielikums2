@@ -1,0 +1,128 @@
+import json
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+import os
+
+
+output_dir = 'dzivoklu_data'
+
+# Load data 
+def load_data(location):
+    try:
+        with open(os.path.join(output_dir, f"{location}_prices.json"), 'r', encoding='utf-8') as json_file:
+            return json.load(json_file)
+    except FileNotFoundError:
+        print(f"Data file for {location} not found.")
+        return None
+
+
+def extract_prices_and_sizes(data):
+    one_time_purchase = [(entry['Price_per_m²'], entry['Price'], entry['m²']) for entry in data['one_time_purchase']]
+    monthly = [(entry['Price_per_m²'], entry['Price'], entry['m²']) for entry in data['monthly']]
+    daily = [(entry['Price'], entry['m²']) for entry in data['daily']]
+    
+    return one_time_purchase, monthly, daily
+
+# Calculate
+def calculate_average_price_per_m2(prices):
+    if not prices:
+        return 0, 0  
+    total_price_per_m2 = sum(entry[0] for entry in prices)  # entry[0] is Price_per_m²
+    total_listings = len(prices)
+    average_price_per_m2 = total_price_per_m2 / total_listings
+    return average_price_per_m2, total_listings
+
+
+def plot_price_vs_size(all_one_time_purchase, all_monthly, all_daily, locations):
+    plt.figure(figsize=(15, 5))
+
+    # One-Time Purchases
+    if all_one_time_purchase:
+        prices_one_time, sizes_one_time = zip(*[(entry[1], entry[2]) for entry in all_one_time_purchase])  # (Price, m²)
+        plt.subplot(1, 3, 1)
+        plt.scatter(prices_one_time, sizes_one_time, alpha=0.5)
+        plt.title('One-Time Purchases')
+        plt.xlabel('Price')
+        plt.ylabel('Size (m²)')
+        plt.grid(True)
+
+    # Monthly Prices
+    if all_monthly:
+        prices_monthly, sizes_monthly = zip(*[(entry[1], entry[2]) for entry in all_monthly])
+        plt.subplot(1, 3, 2)
+        plt.scatter(prices_monthly, sizes_monthly, alpha=0.5)
+        plt.title('Monthly Prices')
+        plt.xlabel('Price')
+        plt.ylabel('Size (m²)')
+        plt.grid(True)
+
+    # Daily Prices
+    if all_daily:
+        prices_daily, sizes_daily = zip(*all_daily)
+        plt.subplot(1, 3, 3)
+        plt.scatter(prices_daily, sizes_daily, alpha=0.5)
+        plt.title('Daily Prices')
+        plt.xlabel('Price')
+        plt.ylabel('Size (m²)')
+        plt.grid(True)
+
+
+    plt.tight_layout()
+    plt.show()
+
+
+locations = [
+    "Purvciems", "Plyavnieki", "Centre", "Agenskalns", "Bolderaya",
+    "Chiekurkalns", "Darzciems", "Daugavgriva", "Dreilini",
+    "Dzeguzhkalns", "Grizinkalns", "Ilguciems", "Imanta", "Yugla",
+    "Kengarags", "Kipsala", "Kliversala", "Krasta_Street_Area",
+    "Maskavas_Priekshpilseta", "Mangali", "Mezhapark", "Mezhciems",
+    "Shampeteris-Pleskodale", "Sarkandaugava", "Teika", "Tornjakalns",
+    "Vecmilgravis", "Voleri", "Zolitude", "Ziepniekkalns"
+]
+
+
+all_one_time_purchase = []
+all_monthly = []
+all_daily = []
+average_prices_per_m2 = {}
+total_listings_per_location = {}
+
+# Load and combine data
+for location in locations:
+    data = load_data(location)
+    if data:
+        one_time_purchase, monthly, daily = extract_prices_and_sizes(data)
+        
+
+        avg_price_per_m2_one_time, total_listings_one_time = calculate_average_price_per_m2(one_time_purchase)
+        
+
+        avg_price_per_m2_monthly, total_listings_monthly = calculate_average_price_per_m2(monthly)
+
+        average_prices_per_m2[location] = {
+            'one_time': avg_price_per_m2_one_time,
+            'monthly': avg_price_per_m2_monthly,
+            'total_listings_one_time': total_listings_one_time,
+            'total_listings_monthly': total_listings_monthly,
+        }
+
+        all_one_time_purchase.extend(one_time_purchase)
+        all_monthly.extend(monthly)
+        all_daily.extend(daily)
+
+
+sorted_average_prices_one_time = sorted(average_prices_per_m2.items(), key=lambda x: x[1]['one_time'], reverse=True)
+sorted_average_prices_monthly = sorted(average_prices_per_m2.items(), key=lambda x: x[1]['monthly'], reverse=True)
+
+print("Average One-Time Purchase Price per m² (Sorted):")
+for location, avg_data in sorted_average_prices_one_time:
+    print(f"{location}: {avg_data['one_time']:.2f} (Total Listings: {avg_data['total_listings_one_time']})")
+
+print("\nAverage Monthly Price per m² (Sorted):")
+for location, avg_data in sorted_average_prices_monthly:
+    print(f"{location}: {avg_data['monthly']:.2f} (Total Listings: {avg_data['total_listings_monthly']})")
+
+# Plot the data with different colors for each location bubble and labels outside of the graph
+plot_price_vs_size(all_one_time_purchase, all_monthly, all_daily, locations)

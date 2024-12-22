@@ -1,0 +1,144 @@
+import json
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+
+output_dir = 'dzivoklu_data'
+
+# Load data
+def load_data(location):
+    try:
+        with open(os.path.join(output_dir, f"{location}_prices.json"), 'r', encoding='utf-8') as json_file:
+            return json.load(json_file)
+    except FileNotFoundError:
+        print(f"Data file for {location} not found.")
+        return None
+
+# Extract values
+def extract_prices_and_sizes(data):
+    one_time_purchase = [(entry['Price'], entry['m²']) for entry in data['one_time_purchase']]
+    monthly = [(entry['Price'], entry['m²']) for entry in data['monthly']]
+    daily = [(entry['Price'], entry['m²']) for entry in data['daily']]
+    
+    return one_time_purchase, monthly, daily
+
+
+def plot_price_vs_size(all_one_time_purchase, all_monthly, all_daily, locations):
+    plt.figure(figsize=(15, 5))
+
+    # Color and size settings
+    bolderaya_color = 'blue'      
+    mezhapark_color = 'red'       
+    neutral_color = 'gray'       
+    bolderaya_size = 50         # size 
+    mezhapark_size = 50         # size 
+    neutral_size = 25             # size 
+    neutral_alpha = 0.2           # Transparency 
+    highlighted_alpha = 0.4      # Transparency 
+
+    # One-Time Purchases 
+    if all_one_time_purchase:
+        plt.subplot(1, 3, 1)
+        # plot other locations
+        for price, size, location in all_one_time_purchase:
+            if location != "Bolderaya" and location != "Mezhapark":
+                plt.scatter(price, size, color=neutral_color, s=neutral_size, alpha=neutral_alpha)
+        # Plot Mezhapark
+        for price, size, location in all_one_time_purchase:
+            if location == "Mezhapark":
+                plt.scatter(price, size, color=mezhapark_color, s=mezhapark_size, alpha=highlighted_alpha)
+        # Plot Bolderaya 
+        for price, size, location in all_one_time_purchase:
+            if location == "Bolderaya":
+                plt.scatter(price, size, color=bolderaya_color, s=bolderaya_size, alpha=highlighted_alpha)
+        plt.title('One-Time Purchases')
+        plt.xlabel('Price')
+        plt.ylabel('Size (m²)')
+        plt.grid(True)
+        plt.ticklabel_format(style='plain', axis='x')  # Disable scientific notation
+        plt.xticks(rotation=90)  # Rotate X-axis
+
+    # Monthly Prices 
+    if all_monthly:
+        plt.subplot(1, 3, 2)
+        # plot all other locations
+        for price, size, location in all_monthly:
+            if location != "Bolderaya" and location != "Mezhapark":
+                plt.scatter(price, size, color=neutral_color, s=neutral_size, alpha=neutral_alpha)
+        # Plot Mezhapark 
+        for price, size, location in all_monthly:
+            if location == "Mezhapark":
+                plt.scatter(price, size, color=mezhapark_color, s=mezhapark_size, alpha=highlighted_alpha)
+        # Plot Bolderaya
+        for price, size, location in all_monthly:
+            if location == "Bolderaya":
+                plt.scatter(price, size, color=bolderaya_color, s=bolderaya_size, alpha=highlighted_alpha)
+        plt.title('Monthly Prices')
+        plt.xlabel('Price')
+        plt.ylabel('Size (m²)')
+        plt.grid(True)
+        plt.ticklabel_format(style='plain', axis='x')  # Disable scientific notation
+        plt.xticks(rotation=90)  # Rotate X-axis labels 
+    # Daily Prices 
+    if all_daily:
+        plt.subplot(1, 3, 3)
+        #  plot other locations
+        for price, size, location in all_daily:
+            if location != "Bolderaya" and location != "Mezhapark":
+                plt.scatter(price, size, color=neutral_color, s=neutral_size, alpha=neutral_alpha)
+        # Plot Mezhapark 
+        for price, size, location in all_daily:
+            if location == "Mezhapark":
+                plt.scatter(price, size, color=mezhapark_color, s=mezhapark_size, alpha=highlighted_alpha)
+        # Plot Bolderaya
+        for price, size, location in all_daily:
+            if location == "Bolderaya":
+                plt.scatter(price, size, color=bolderaya_color, s=bolderaya_size, alpha=highlighted_alpha)
+        plt.title('Daily Prices')
+        plt.xlabel('Price')
+        plt.ylabel('Size (m²)')
+        plt.grid(True)
+        plt.ticklabel_format(style='plain', axis='x')  # Disable scientific notation 
+        plt.xticks(rotation=90)  # Rotate X-axis labels 
+
+    # Legend
+    handles = [
+        plt.Line2D([0], [0], marker='o', color='w', label='Bolderaya', markerfacecolor=bolderaya_color, markersize=10),
+        plt.Line2D([0], [0], marker='o', color='w', label='Mezhapark', markerfacecolor=mezhapark_color, markersize=10),
+        plt.Line2D([0], [0], marker='o', color='w', label='Other Locations', markerfacecolor=neutral_color, markersize=10)
+    ]
+
+    plt.figlegend(handles=handles, loc='upper right', bbox_to_anchor=(1.15, 1), bbox_transform=plt.gcf().transFigure)
+
+    # Show all plots
+    plt.tight_layout()
+    plt.show()
+
+
+locations = [
+    "Purvciems", "Plyavnieki", "Centre", "Agenskalns", "Bolderaya",
+    "Chiekurkalns", "Darzciems", "Daugavgriva", "Dreilini",
+    "Dzeguzhkalns", "Grizinkalns", "Ilguciems", "Imanta", "Yugla",
+    "Kengarags", "Kipsala", "Kliversala", "Krasta_Street_Area",
+    "Maskavas_Priekshpilseta", "Mangali", "Mezhapark", "Mezhciems",
+    "Shampeteris-Pleskodale", "Sarkandaugava", "Teika", "Tornjakalns",
+    "Vecmilgravis", "Voleri", "Zolitude", "Ziepniekkalns"
+]
+
+
+all_one_time_purchase = []
+all_monthly = []
+all_daily = []
+
+# Load data
+for location in locations:
+    data = load_data(location)
+    if data:
+        one_time_purchase, monthly, daily = extract_prices_and_sizes(data)
+        # Append location information to data tuples
+        all_one_time_purchase.extend([(price, size, location) for price, size in one_time_purchase])
+        all_monthly.extend([(price, size, location) for price, size in monthly])
+        all_daily.extend([(price, size, location) for price, size in daily])
+
+
+plot_price_vs_size(all_one_time_purchase, all_monthly, all_daily, locations)
